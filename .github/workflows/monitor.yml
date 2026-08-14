@@ -1,0 +1,49 @@
+# FUT Monitor - coleta de precos agendada
+#
+# Intervalo: ajuste o cron abaixo (padrao: a cada 30 minutos).
+# Ex.: "*/30 * * * *" = 30 min | "0 * * * *" = 1h | "0 */2 * * *" = 2h
+# Obs.: o GitHub pode atrasar alguns minutos em horarios de pico.
+
+name: FUT Monitor
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fut-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Coletar precos
+        env:
+          PLATFORM: ps5            # ps5 = console (PS/Xbox) | pc
+          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python collector/collector.py
+
+      - name: Salvar dados
+        run: |
+          git config user.name "fut-monitor-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Nada para commitar"
+          else
+            git commit -m "dados: atualizacao automatica de precos"
+            git pull --rebase origin ${GITHUB_REF_NAME} || true
+            git push
+          fi

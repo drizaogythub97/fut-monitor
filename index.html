@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUT Monitor — preços EA FC 26</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --surface:#131a30; --surface2:#1a2342; --border:#26305380;
+    --ink:#e8ecf8; --ink2:#9aa5c4; --ink3:#5f6a8c;
+    --accent:#38e07b; --accent2:#22d3ee; --gold:#f5c451;
+    --up:#38e07b; --down:#ff6b81; --danger:#ff6b81;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh}
+  a{color:var(--accent2);text-decoration:none}
+  header{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#0b1020ee;backdrop-filter:blur(8px);z-index:10}
+  header h1{font-size:20px;letter-spacing:.5px}
+  header h1 span{color:var(--accent)}
+  .meta-line{font-size:12px;color:var(--ink2)}
+  .spacer{flex:1}
+  button{cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--ink);border-radius:8px;padding:8px 14px;font-size:13px;transition:.15s}
+  button:hover{border-color:var(--accent2);color:var(--accent2)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06220f;font-weight:700}
+  button.primary:hover{filter:brightness(1.1);color:#06220f}
+  button.danger:hover{border-color:var(--danger);color:var(--danger)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  main{max-width:1080px;margin:0 auto;padding:22px}
+  .add-bar{display:flex;gap:10px;margin-bottom:22px}
+  .add-bar input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--ink);font-size:14px}
+  .add-bar input:focus{outline:none;border-color:var(--accent2)}
+  .banner{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
+  .banner b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;gap:14px;cursor:pointer;transition:.15s;position:relative}
+  .card:hover{border-color:var(--accent2);transform:translateY(-2px)}
+  .card img.face{width:96px;height:auto;align-self:center;filter:drop-shadow(0 4px 12px #0008)}
+  .card .noimg{width:96px;height:130px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:11px;text-align:center;align-self:center}
+  .card .info{flex:1;min-width:0}
+  .card h3{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub{font-size:12px;color:var(--ink2);margin-top:2px}
+  .price{font-size:22px;font-weight:800;margin-top:8px;color:var(--gold)}
+  .price small{font-size:12px;color:var(--ink2);font-weight:400}
+  .chg{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 7px;margin-top:5px}
+  .chg.up{color:var(--up);background:#38e07b1a}
+  .chg.down{color:var(--down);background:#ff6b811a}
+  .chg.flat{color:var(--ink2);background:#9aa5c41a}
+  .target-line{font-size:12px;color:var(--ink2);margin-top:8px}
+  .target-line b{color:var(--ink)}
+  .pending{font-size:12px;color:var(--gold);margin-top:8px}
+  .extinct{font-size:12px;color:var(--danger);margin-top:8px;font-weight:700}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:#000a;display:none;align-items:flex-start;justify-content:center;padding:30px 14px;overflow-y:auto;z-index:50}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:860px;width:100%;padding:24px;position:relative}
+  .modal .close{position:absolute;top:14px;right:14px}
+  .detail-top{display:flex;gap:22px;flex-wrap:wrap}
+  .detail-top img{width:180px;filter:drop-shadow(0 6px 18px #0009)}
+  .detail-main{flex:1;min-width:260px}
+  .detail-main h2{font-size:24px}
+  .badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .badge{font-size:11.5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;color:var(--ink2)}
+  .badge.plus{border-color:var(--gold);color:var(--gold);font-weight:700}
+  .big-price{font-size:30px;font-weight:800;color:var(--gold);margin:6px 0}
+  .stats6{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+  .stat .lbl{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
+  .stat .lbl b{color:var(--ink);font-size:13px}
+  .bar{height:6px;border-radius:4px;background:var(--surface2);margin-top:4px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:4px}
+  .alert-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface2);border-radius:10px;padding:12px;margin-top:14px}
+  .alert-form label{font-size:12.5px;color:var(--ink2)}
+  .alert-form input,.alert-form select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--ink);padding:7px 9px;font-size:13px}
+  .alert-form input{width:130px}
+  .chart-wrap{margin-top:20px}
+  .chart-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .chart-head h4{font-size:14px;color:var(--ink2);font-weight:600;flex:1}
+  .range-btn{padding:4px 10px;font-size:12px;border-radius:6px}
+  .range-btn.on{border-color:var(--accent2);color:var(--accent2)}
+  .chart-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;height:280px}
+  .mini-stats{display:flex;gap:18px;margin-top:10px;font-size:12.5px;color:var(--ink2);flex-wrap:wrap}
+  .mini-stats b{color:var(--ink)}
+  .attr-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 18px;margin-top:14px;font-size:12.5px}
+  .attr-cols .row{display:flex;justify-content:space-between;color:var(--ink2);padding:2px 0}
+  .attr-cols .row b{color:var(--ink)}
+  .section-title{font-size:13px;color:var(--ink3);text-transform:uppercase;letter-spacing:1px;margin-top:18px;margin-bottom:6px}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+  /* settings */
+  .settings-grid{display:grid;gap:12px;margin-top:14px}
+  .settings-grid label{font-size:12.5px;color:var(--ink2);display:block;margin-bottom:4px}
+  .settings-grid input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:10px 12px;font-size:13.5px}
+  .hint{font-size:12px;color:var(--ink3);line-height:1.55;margin-top:12px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent2);border-radius:10px;padding:12px 20px;font-size:13.5px;display:none;z-index:99;max-width:90vw}
+  .toast.err{border-color:var(--danger)}
+  .empty{color:var(--ink3);text-align:center;padding:60px 0;font-size:14.5px;line-height:1.8}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚽ FUT<span>Monitor</span></h1>
+  <div class="meta-line" id="updated-line">carregando…</div>
+  <div class="spacer"></div>
+  <button id="refresh-btn" title="Atualizar dados">↻ Atualizar</button>
+  <button id="run-btn" title="Executa a coleta agora no GitHub Actions">▶ Coletar agora</button>
+  <button id="settings-btn">⚙ Configurar</button>
+</header>
+
+<main>
+  <div class="banner" id="setup-banner" style="display:none">
+    <b>Quase lá!</b> Para adicionar jogadores por aqui, clique em <b>⚙ Configurar</b> e informe seu
+    repositório e um token do GitHub. Sem isso a página só exibe os dados já coletados.
+    O passo a passo completo está no <b>README.md</b> do projeto.
+  </div>
+
+  <div class="add-bar">
+    <input id="add-input" placeholder="Cole o link do jogador no fut.gg — ex.: https://www.fut.gg/players/190045-johan-cruyff/26-100853341/">
+    <button class="primary" id="add-btn">+ Adicionar</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">
+    Nenhum jogador monitorado ainda.<br>Cole um link do fut.gg acima para começar. 👆
+  </div>
+</main>
+
+<!-- modal detalhe -->
+<div class="overlay" id="detail-overlay">
+  <div class="modal" id="detail-modal"></div>
+</div>
+
+<!-- modal config -->
+<div class="overlay" id="settings-overlay">
+  <div class="modal" style="max-width:520px">
+    <button class="close" onclick="closeSettings()">✕</button>
+    <h2 style="font-size:19px">⚙ Configuração</h2>
+    <div class="settings-grid">
+      <div><label>Usuário/organização do GitHub</label><input id="cfg-owner" placeholder="ex.: adriano97"></div>
+      <div><label>Nome do repositório</label><input id="cfg-repo" placeholder="ex.: fut-monitor"></div>
+      <div><label>Branch</label><input id="cfg-branch" placeholder="main"></div>
+      <div><label>Token do GitHub (fine-grained PAT)</label><input id="cfg-pat" type="password" placeholder="github_pat_…"></div>
+    </div>
+    <div class="hint">
+      O token precisa de acesso apenas a este repositório com permissões
+      <b>Contents: Read and write</b> e <b>Actions: Read and write</b>.
+      Ele fica salvo somente neste navegador (localStorage). Veja o README para criar o token.
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="saveSettings()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const GAME = "26";
+const state = { summary:null, players:[], pendingIds:new Set(), chart:null, range:'7d' };
+
+/* ---------------- helpers ---------------- */
+const fmt = v => v==null ? "—" : v.toLocaleString("pt-BR");
+const cfg = () => JSON.parse(localStorage.getItem("futmon-cfg") || "{}");
+const hasCfg = () => { const c = cfg(); return c.owner && c.repo && c.pat; };
+function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast"+(err?" err":""); t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", 4200); }
+function parseFutggUrl(u){ const m=(u||"").match(new RegExp("fut\\.gg\\/players\\/(\\d+)-[^/]*\\/"+GAME+"-(\\d+)")); return m?{eaId:+m[1],cardId:+m[2]}:null; }
+function agoText(epoch){ if(!epoch) return ""; const m=Math.round((Date.now()/1000-epoch)/60); if(m<1) return "agora"; if(m<60) return `há ${m} min`; const h=Math.floor(m/60); if(h<24) return `há ${h} h`; return `há ${Math.floor(h/24)} d`; }
+
+/* ---------------- GitHub API ---------------- */
+async function gh(path, opts={}){
+  const c = cfg();
+  const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}${path}`, {
+    ...opts,
+    headers:{ "Authorization":`Bearer ${c.pat}`, "Accept":"application/vnd.github+json", ...(opts.headers||{}) }
+  });
+  if(!r.ok && r.status!==404){ throw new Error(`GitHub API ${r.status}: ${(await r.text()).slice(0,200)}`); }
+  return r;
+}
+const b64enc = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,"")), c=>c.charCodeAt(0)));
+
+async function getPlayersFile(){
+  const c = cfg();
+  const r = await gh(`/contents/data/players.json?ref=${c.branch||"main"}`);
+  if(r.status===404) return { json:{settings:{platform:"ps5"},players:[]}, sha:undefined };
+  const j = await r.json();
+  return { json: JSON.parse(b64dec(j.content)), sha: j.sha };
+}
+async function putPlayersFile(json, sha, message){
+  const c = cfg();
+  const body = { message, content: b64enc(JSON.stringify(json,null,2)), branch: c.branch||"main" };
+  if(sha) body.sha = sha;
+  const r = await gh(`/contents/data/players.json`, { method:"PUT", body: JSON.stringify(body) });
+  if(!r.ok) throw new Error("Falha ao salvar players.json");
+}
+async function dispatchWorkflow(){
+  const c = cfg();
+  try{
+    await gh(`/actions/workflows/monitor.yml/dispatches`, { method:"POST", body: JSON.stringify({ref: c.branch||"main"}) });
+  }catch(e){ console.warn("dispatch:", e); }
+}
+
+/* ---------------- dados ---------------- */
+async function loadSummary(){
+  try{
+    const r = await fetch(`data/summary.json?t=${Date.now()}`);
+    if(!r.ok) throw new Error(r.status);
+    state.summary = await r.json();
+  }catch(e){
+    state.summary = null;
+  }
+  render();
+}
+async function loadJson(path){
+  try{ const r = await fetch(`${path}?t=${Date.now()}`); return r.ok ? await r.json() : null; }
+  catch(e){ return null; }
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  const s = state.summary;
+  $("#setup-banner").style.display = hasCfg() ? "none" : "block";
+  $("#updated-line").innerHTML = s
+    ? `Mercado: <b style="color:var(--ink)">Console (PS/Xbox)</b> · preços ${agoText(s.pricesPublishedAt||s.generatedAt)}`
+    : "sem dados coletados ainda";
+  const grid = $("#grid"); grid.innerHTML = "";
+  const players = s?.players || [];
+  $("#empty").style.display = (players.length || state.pendingIds.size) ? "none" : "block";
+
+  for(const p of players){
+    const chg = p.change24h;
+    const chgHtml = chg==null ? "" :
+      `<span class="chg ${chg>0?"up":chg<0?"down":"flat"}">${chg>0?"▲":chg<0?"▼":"•"} ${fmt(Math.abs(chg))} (24h)</span>`;
+    const modeTxt = {below:"avisar se cair abaixo de", above:"avisar se subir acima de", every:"aviso a cada checagem", off:"alertas desligados"}[p.alertMode||"off"];
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
+      ${p.cardImageUrl ? `<img class="face" src="${p.cardImageUrl}" alt="">` : `<div class="noimg">sem imagem</div>`}
+      <div class="info">
+        <h3>${p.name || "Carta " + p.cardId}</h3>
+        <div class="sub">${p.rating??"?"} OVR · ${p.position??"?"} ${p.rarityName?("· "+p.rarityName):""}</div>
+        ${p.extinct ? `<div class="extinct">EXTINTA — sem preço no mercado</div>` : `<div class="price">🪙 ${fmt(p.price)}</div>`}
+        ${chgHtml}
+        <div class="target-line">${p.targetPrice ? `Alvo: <b>${fmt(p.targetPrice)}</b> · ` : ""}${modeTxt}</div>
+      </div>`;
+    el.onclick = () => openDetail(p);
+    grid.appendChild(el);
+  }
+  for(const id of state.pendingIds){
+    if(players.some(p=>p.cardId===id)) { state.pendingIds.delete(id); continue; }
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `<div class="noimg">⏳</div><div class="info"><h3>Novo jogador</h3>
+      <div class="pending">Coletando dados… a primeira coleta leva 1–2 min.<br>Clique em ↻ Atualizar em instantes.</div></div>`;
+    grid.appendChild(el);
+  }
+}
+
+/* ---------------- detalhe ---------------- */
+async function openDetail(p){
+  const ov = $("#detail-overlay"), md = $("#detail-modal");
+  ov.classList.add("open");
+  md.innerHTML = `<button class="close" onclick="closeDetail()">✕</button><p style="color:var(--ink2)">Carregando ${p.name||""}…</p>`;
+  const [meta, hist] = await Promise.all([
+    loadJson(`data/meta/${p.cardId}.json`),
+    loadJson(`data/history/${p.cardId}.json`),
+  ]);
+  const m = meta || {};
+  const faces = [
+    ["PAC", m.facePace], ["SHO", m.faceShooting], ["PAS", m.facePassing],
+    ["DRI", m.faceDribbling], ["DEF", m.faceDefending], ["FIS", m.facePhysicality],
+  ];
+  const barColor = v => v>=90 ? "var(--accent)" : v>=80 ? "var(--accent2)" : v>=70 ? "var(--gold)" : "var(--down)";
+  const attrs = [
+    ["Aceleração","attributeAcceleration"],["Pique","attributeSprintSpeed"],["Agilidade","attributeAgility"],
+    ["Equilíbrio","attributeBalance"],["Impulsão","attributeJumping"],["Resistência","attributeStamina"],
+    ["Força","attributeStrength"],["Reação","attributeReactions"],["Agressividade","attributeAggression"],
+    ["Compostura","attributeComposure"],["Interceptação","attributeInterceptions"],["Posicionamento","attributePositioning"],
+    ["Visão","attributeVision"],["Controle de bola","attributeBallControl"],["Cruzamento","attributeCrossing"],
+    ["Drible","attributeDribbling"],["Finalização","attributeFinishing"],["Falta","attributeFkAccuracy"],
+    ["Cabeceio","attributeHeadingAccuracy"],["Passe longo","attributeLongPassing"],["Passe curto","attributeShortPassing"],
+    ["Defesa (consc.)","attributeDefensiveAwareness"],["Potência do chute","attributeShotPower"],["Chute de longe","attributeLongShots"],
+    ["Carrinho em pé","attributeStandingTackle"],["Carrinho","attributeSlidingTackle"],["Voleio","attributeVolleys"],
+    ["Curva","attributeCurve"],["Pênalti","attributePenalties"],
+  ];
+  const psPlus = new Set(m.playstylePlusNames||[]);
+  const allPs = [...(m.playstylePlusNames||[]), ...(m.playstyleNames||[]).filter(x=>!psPlus.has(x))];
+  md.innerHTML = `
+    <button class="close" onclick="closeDetail()">✕</button>
+    <div class="detail-top">
+      ${p.cardImageUrl?`<img src="${p.cardImageUrl}" alt="">`:""}
+      <div class="detail-main">
+        <h2>${m.name||p.name||"Carta "+p.cardId}</h2>
+        <div class="badges">
+          <span class="badge">${m.overall??p.rating??"?"} OVR</span>
+          <span class="badge">${m.positionName||p.position||"?"}${(m.altPositionNames||[]).length?" · "+m.altPositionNames.join(" "):""}</span>
+          ${m.rarityName?`<span class="badge">${m.rarityName}</span>`:""}
+          ${m.nationName?`<span class="badge">${m.nationName}</span>`:""}
+          ${m.clubName?`<span class="badge">${m.clubName}</span>`:""}
+          ${m.leagueName?`<span class="badge">${m.leagueName}</span>`:""}
+        </div>
+        ${p.extinct?`<div class="extinct">EXTINTA — sem preço no mercado</div>`:`<div class="big-price">🪙 ${fmt(p.price)}</div>`}
+        <div class="mini-stats">
+          <span>Skills <b>${"★".repeat(m.skillMoves||0)||"—"}</b></span>
+          <span>Perna ruim <b>${"★".repeat(m.weakFoot||0)||"—"}</b></span>
+          <span>Pé <b>${m.footName||"—"}</b></span>
+          <span>Altura <b>${m.height?m.height+" cm":"—"}</b></span>
+          <span>AcceleRATE <b>${m.accelerateType||"—"}</b></span>
+        </div>
+        <div class="stats6">
+          ${faces.map(([l,v])=>`<div class="stat"><div class="lbl">${l}<b>${v??"—"}</b></div><div class="bar"><i style="width:${v||0}%;background:${barColor(v||0)}"></i></div></div>`).join("")}
+        </div>
+      </div>
+    </div>
+    ${allPs.length?`<div class="section-title">PlayStyles</div>
+      <div class="badges">${allPs.map(n=>`<span class="badge${psPlus.has(n)?" plus":""}">${psPlus.has(n)?"✦ ":""}${n}</span>`).join("")}</div>`:""}
+    <div class="alert-form">
+      <label>Alvo (moedas):</label><input id="target-input" type="number" min="0" step="1000" value="${p.targetPrice??""}">
+      <label>Modo:</label>
+      <select id="mode-input">
+        <option value="off" ${!p.alertMode||p.alertMode==="off"?"selected":""}>Sem alertas</option>
+        <option value="below" ${p.alertMode==="below"?"selected":""}>Avisar quando cair abaixo do alvo</option>
+        <option value="above" ${p.alertMode==="above"?"selected":""}>Avisar quando subir acima do alvo</option>
+        <option value="every" ${p.alertMode==="every"?"selected":""}>Avisar a cada checagem (valor atual)</option>
+      </select>
+      <button class="primary" onclick="saveAlert(${p.cardId})">Salvar alerta</button>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-head">
+        <h4>Menor preço (BIN) — histórico</h4>
+        ${["24h","7d","30d","tudo"].map(r=>`<button class="range-btn ${state.range===r?"on":""}" onclick="setRange('${r}',${p.cardId})">${r}</button>`).join("")}
+      </div>
+      <div class="chart-box"><canvas id="price-chart"></canvas></div>
+      <div class="mini-stats" id="hist-stats"></div>
+    </div>
+    <div class="section-title">Atributos</div>
+    <div class="attr-cols">
+      ${attrs.filter(([,k])=>m[k]!=null).map(([l,k])=>`<div class="row"><span>${l}</span><b>${m[k]}</b></div>`).join("")}
+    </div>
+    <div class="modal-actions">
+      <a href="${p.url}" target="_blank" rel="noopener"><button>Ver no fut.gg ↗</button></a>
+      <button class="danger" onclick="removePlayer(${p.cardId})">🗑 Remover monitor</button>
+    </div>`;
+  state._hist = hist;
+  drawChart(hist);
+}
+function closeDetail(){ $("#detail-overlay").classList.remove("open"); if(state.chart){state.chart.destroy();state.chart=null;} }
+function setRange(r, cardId){ state.range = r; document.querySelectorAll(".range-btn").forEach(b=>b.classList.toggle("on", b.textContent===r)); drawChart(state._hist); }
+
+function drawChart(hist){
+  const canvas = $("#price-chart");
+  if(!canvas) return;
+  if(state.chart){ state.chart.destroy(); state.chart=null; }
+  const stats = $("#hist-stats");
+  const pts = (hist?.points||[]).filter(p=>p[1]>0);
+  if(!pts.length){ stats.textContent = "Ainda não há histórico suficiente — os pontos aparecem a cada coleta (30 min)."; return; }
+  const now = Date.now()/1000;
+  const spans = {"24h":86400, "7d":7*86400, "30d":30*86400, "tudo":Infinity};
+  const span = spans[state.range] ?? Infinity;
+  let sel = pts.filter(p=>p[0] >= now - span);
+  if(sel.length < 2) sel = pts.slice(-Math.max(2, Math.min(pts.length, 20)));
+  const values = sel.map(p=>p[1]);
+  const lo = Math.min(...values), hi = Math.max(...values), avg = values.reduce((a,b)=>a+b,0)/values.length;
+  stats.innerHTML = `<span>Mín <b>${fmt(lo)}</b></span><span>Méd <b>${fmt(Math.round(avg))}</b></span><span>Máx <b>${fmt(hi)}</b></span><span>Pontos <b>${sel.length}</b></span>`;
+  const labels = sel.map(p=>{
+    const d = new Date(p[0]*1000);
+    return span<=86400 ? d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})
+                       : d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  });
+  state.chart = new Chart(canvas, {
+    type:"line",
+    data:{ labels, datasets:[{
+      label:"Menor BIN", data:values,
+      borderColor:"#22d3ee", borderWidth:2,
+      backgroundColor:"rgba(34,211,238,.08)", fill:true,
+      pointRadius:0, pointHoverRadius:4, pointHoverBackgroundColor:"#22d3ee", tension:.25,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{mode:"index", intersect:false},
+      plugins:{ legend:{display:false},
+        tooltip:{ backgroundColor:"#1a2342", borderColor:"#26305380", borderWidth:1,
+          titleColor:"#9aa5c4", bodyColor:"#e8ecf8",
+          callbacks:{ label: c => " 🪙 " + fmt(c.parsed.y) } } },
+      scales:{
+        x:{ ticks:{color:"#5f6a8c", maxTicksLimit:8, maxRotation:0}, grid:{display:false} },
+        y:{ ticks:{color:"#5f6a8c", callback:v=>fmt(v)}, grid:{color:"rgba(154,165,196,.08)"} },
+      }
+    }
+  });
+}
+
+/* ---------------- ações ---------------- */
+async function addPlayer(){
+  const input = $("#add-input");
+  const parsed = parseFutggUrl(input.value.trim());
+  if(!parsed) return toast("Link inválido. Use um link de jogador do fut.gg (edição 26).", true);
+  if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
+  if(state.summary?.players?.some(p=>p.cardId===parsed.cardId)) return toast("Esse jogador já está sendo monitorado.");
+  const btn = $("#add-btn"); btn.disabled = true;
+  try{
+    const { json, sha } = await getPlayersFile();
+    json.players = json.players || [];
+    if(!json.players.some(p=>p.cardId===parsed.cardId)){
+      json.players.push({ url: input.value.trim().split("?")[0], eaId: parsed.eaId, cardId: parsed.cardId, targetPrice: null, alertMode: "off" });
+      await putPlayersFile(json, sha, `adiciona carta ${parsed.cardId}`);
+    }
+    await dispatchWorkflow();
+    state.pendingIds.add(parsed.cardId);
+    input.value = "";
+    toast("Jogador adicionado! Coleta iniciada — os dados aparecem em 1–2 min.");
+    render();
+    setTimeout(loadSummary, 90000);
+  }catch(e){ toast("Erro: " + e.message, true); }
+  finally{ btn.disabled = false; }
+}
+
+async function saveAlert(cardId){
+  if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
+  const target = parseInt($("#target-input").value) || null;
+  const mode = $("#mode-input").value;
+  if((mode==="below"||mode==="above") && !target) return toast("Defina um valor alvo para esse modo de alerta.", true);
+  try{
+    const { json, sha } = await getPlayersFile();
+    const p = (json.players||[]).find(x=>x.cardId===cardId);
+    if(!p) return toast("Jogador não encontrado no players.json.", true);
+    p.targetPrice = target; p.alertMode = mode;
+    await putPlayersFile(json, sha, `alerta carta ${cardId}: ${mode} ${target??""}`);
+    const sp = state.summary?.players?.find(x=>x.cardId===cardId);
+    if(sp){ sp.targetPrice = target; sp.alertMode = mode; }
+    toast("Alerta salvo! Vale a partir da próxima coleta.");
+    render();
+  }catch(e){ toast("Erro: " + e.message, true); }
+}
+
+async function removePlayer(cardId){
+  if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
+  if(!confirm("Remover este jogador do monitor?")) return;
+  try{
+    const { json, sha } = await getPlayersFile();
+    json.players = (json.players||[]).filter(x=>x.cardId!==cardId);
+    await putPlayersFile(json, sha, `remove carta ${cardId}`);
+    if(state.summary) state.summary.players = state.summary.players.filter(x=>x.cardId!==cardId);
+    closeDetail(); render();
+    toast("Removido. O card some da página na próxima coleta (ou já sumiu).");
+    await dispatchWorkflow();
+  }catch(e){ toast("Erro: " + e.message, true); }
+}
+
+/* ---------------- settings ---------------- */
+function openSettings(){
+  const c = cfg();
+  $("#cfg-owner").value = c.owner||""; $("#cfg-repo").value = c.repo||"";
+  $("#cfg-branch").value = c.branch||"main"; $("#cfg-pat").value = c.pat||"";
+  $("#settings-overlay").classList.add("open");
+}
+function closeSettings(){ $("#settings-overlay").classList.remove("open"); }
+function saveSettings(){
+  localStorage.setItem("futmon-cfg", JSON.stringify({
+    owner: $("#cfg-owner").value.trim(), repo: $("#cfg-repo").value.trim(),
+    branch: $("#cfg-branch").value.trim()||"main", pat: $("#cfg-pat").value.trim(),
+  }));
+  closeSettings(); render(); toast("Configuração salva neste navegador.");
+}
+
+/* ---------------- init ---------------- */
+$("#add-btn").onclick = addPlayer;
+$("#add-input").addEventListener("keydown", e=>{ if(e.key==="Enter") addPlayer(); });
+$("#refresh-btn").onclick = loadSummary;
+$("#settings-btn").onclick = openSettings;
+$("#run-btn").onclick = async () => {
+  if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
+  await dispatchWorkflow();
+  toast("Coleta disparada! Atualize em 1–2 min.");
+};
+document.querySelectorAll(".overlay").forEach(ov => ov.addEventListener("click", e=>{ if(e.target===ov){ ov.classList.remove("open"); if(ov.id==="detail-overlay") closeDetail(); } }));
+loadSummary();
+</script>
+</body>
+</html>
