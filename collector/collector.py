@@ -9,10 +9,12 @@ Executado pelo GitHub Actions (ou localmente). Fluxo:
 6. Gera data/summary.json para a interface web
 
 Env vars:
-  PLATFORM            ps5 (console, padrao) ou pc
-  WHATSAPP_PHONE      +5511999999999
-  CALLMEBOT_APIKEY    chave do CallMeBot
-  DRY_RUN             se definido, imprime notificacoes em vez de enviar
+  PLATFORM             ps5 (console, padrao) ou pc
+  TELEGRAM_BOT_TOKEN   token do bot (canal principal - entrega em segundos)
+  TELEGRAM_CHAT_ID     seu chat id no Telegram
+  WHATSAPP_PHONE       +5511999999999 (fallback via CallMeBot)
+  CALLMEBOT_APIKEY     chave do CallMeBot (fallback)
+  DRY_RUN              se definido, imprime notificacoes em vez de enviar
 """
 
 import json
@@ -22,7 +24,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import futgg  # noqa: E402
-from notify import send_whatsapp, fmt_coins  # noqa: E402
+from notify import send_notification, fmt_coins  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -196,7 +198,7 @@ def main():
         })
 
     for text in alerts:
-        send_whatsapp(text)
+        send_notification(text)
 
     save_json(os.path.join(DATA, "summary.json"), {
         "generatedAt": now,

@@ -177,17 +177,19 @@
       <b>Contents: Read and write</b> e <b>Actions: Read and write</b>.
       Ele fica salvo somente neste navegador (localStorage). Veja o README para criar o token.
     </div>
-    <h2 style="font-size:16px;margin-top:20px">📱 WhatsApp (teste)</h2>
+    <h2 style="font-size:16px;margin-top:20px">✈️ Telegram (notificações)</h2>
     <div class="settings-grid" style="margin-top:10px">
-      <div><label>Seu número (com DDI)</label><input id="cfg-wa-phone" placeholder="+5511999999999"></div>
-      <div><label>Apikey do CallMeBot</label><input id="cfg-wa-key" type="password" placeholder="123456"></div>
+      <div><label>Token do bot (do @BotFather)</label><input id="cfg-tg-token" type="password" placeholder="1234567:AAA…"></div>
+      <div><label>Chat ID <button style="padding:2px 8px;font-size:11px;margin-left:6px" id="tg-detect-btn" onclick="detectChatId()">🔎 Detectar</button></label>
+        <input id="cfg-tg-chat" placeholder="ex.: 123456789"></div>
     </div>
     <div class="hint">
-      Estes campos servem para o botão de teste abaixo. Os alertas automáticos usam os
-      <b>secrets do GitHub</b> (WHATSAPP_PHONE / CALLMEBOT_APIKEY) — use os mesmos valores nos dois lugares.
+      Crie o bot com o <b>@BotFather</b> (/newbot), envie um "oi" para o seu bot e clique em
+      <b>Detectar</b>. Os alertas automáticos usam os <b>secrets do GitHub</b>
+      (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID) — use os mesmos valores nos dois lugares.
     </div>
     <div class="modal-actions">
-      <button id="wa-test-btn" onclick="testWhatsApp()">📨 Testar notificação</button>
+      <button id="tg-test-btn" onclick="testTelegram()">📨 Testar notificação</button>
       <button class="primary" onclick="saveSettings()">Salvar</button>
     </div>
   </div>
@@ -578,7 +580,7 @@ function openSettings(){
   const c = cfg();
   $("#cfg-owner").value = c.owner||""; $("#cfg-repo").value = c.repo||"";
   $("#cfg-branch").value = c.branch||"main"; $("#cfg-pat").value = c.pat||"";
-  $("#cfg-wa-phone").value = c.waPhone||""; $("#cfg-wa-key").value = c.waKey||"";
+  $("#cfg-tg-token").value = c.tgToken||""; $("#cfg-tg-chat").value = c.tgChat||"";
   $("#settings-overlay").classList.add("open");
 }
 function closeSettings(){ $("#settings-overlay").classList.remove("open"); }
@@ -586,22 +588,41 @@ function saveSettings(){
   localStorage.setItem("futmon-cfg", JSON.stringify({
     owner: $("#cfg-owner").value.trim(), repo: $("#cfg-repo").value.trim(),
     branch: $("#cfg-branch").value.trim()||"main", pat: $("#cfg-pat").value.trim(),
-    waPhone: $("#cfg-wa-phone").value.trim(), waKey: $("#cfg-wa-key").value.trim(),
+    tgToken: $("#cfg-tg-token").value.trim(), tgChat: $("#cfg-tg-chat").value.trim(),
   }));
   closeSettings(); render(); note("ok", "Configuração salva", "Guardada apenas neste navegador.");
 }
-async function testWhatsApp(){
-  const phone = $("#cfg-wa-phone").value.trim(), key = $("#cfg-wa-key").value.trim();
-  if(!phone || !key) return note("err", "Faltam dados", "Preencha seu número e a apikey do CallMeBot acima.");
-  const btn = $("#wa-test-btn"); busy(btn, true);
+async function detectChatId(){
+  const token = $("#cfg-tg-token").value.trim();
+  if(!token) return note("err", "Falta o token", "Cole o token do bot primeiro (campo acima).");
+  const btn = $("#tg-detect-btn"); busy(btn, true);
   try{
-    await fetch("https://api.callmebot.com/whatsapp.php?" + new URLSearchParams({
-      phone, apikey: key,
-      text: "🔔 Teste do FUT Monitor — suas notificações de preço estão funcionando! ⚽🪙",
-    }), { mode: "no-cors" });
-    note("info", "Teste enviado", "A mensagem deve chegar no seu WhatsApp em até 1 minuto. Se não chegar, revise o número (formato +55…) e a apikey.");
+    const r = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.description || "token inválido");
+    const chats = [...new Set((j.result||[]).map(u => u.message?.chat?.id).filter(Boolean))];
+    if(!chats.length) return note("err", "Nenhuma conversa encontrada",
+      "Abra o Telegram, envie um \"oi\" para o SEU bot e clique em Detectar de novo.");
+    $("#cfg-tg-chat").value = chats[chats.length-1];
+    note("ok", "Chat ID detectado", `Encontrei o chat ${chats[chats.length-1]}. Clique em Salvar.`);
   }catch(e){
-    note("err", "Falha ao enviar", "Não consegui contatar o CallMeBot: " + e.message);
+    note("err", "Não consegui detectar", e.message);
+  }finally{ busy(btn, false); }
+}
+async function testTelegram(){
+  const token = $("#cfg-tg-token").value.trim(), chat = $("#cfg-tg-chat").value.trim();
+  if(!token || !chat) return note("err", "Faltam dados", "Preencha o token do bot e o chat ID (use o botão Detectar).");
+  const btn = $("#tg-test-btn"); busy(btn, true);
+  try{
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage?` + new URLSearchParams({
+      chat_id: chat,
+      text: "🔔 Teste do FUT Monitor — suas notificações de preço estão funcionando! ⚽🪙",
+    }));
+    const j = await r.json();
+    if(j.ok) note("ok", "Notificação entregue", "O Telegram confirmou o envio — confira seu celular.");
+    else note("err", "O Telegram recusou", j.description || "verifique token e chat ID.");
+  }catch(e){
+    note("err", "Falha ao enviar", e.message);
   }finally{ busy(btn, false); }
 }
 

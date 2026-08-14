@@ -48,12 +48,21 @@ GitHub Pages (grátis)
      git push -u origin main
      ```
 
-### 2. Ative o WhatsApp gratuito (CallMeBot)
+### 2. Crie o bot do Telegram (notificações em segundos)
 
-1. Abra no celular: <https://wa.me/34644872157?text=I%20allow%20callmebot%20to%20send%20me%20messages>
-   (número atual do bot: **+34 644 87 21 57** — confira em callmebot.com se mudar)
-2. Envie a mensagem pré-preenchida: `I allow callmebot to send me messages`
-3. Em ~2 minutos ele responde com sua **apikey** (ex.: `Your APIKEY is 123456`).
+1. No Telegram, fale com **@BotFather** → envie `/newbot` → escolha um nome
+   (ex.: FUT Monitor) e um username (ex.: `adriano_futmon_bot`).
+2. Guarde o **token** que ele responde (formato `1234567:AAAbbb…`).
+3. Abra a conversa com o SEU bot recém-criado e envie qualquer mensagem (`oi`) —
+   isso é necessário para ele poder te mandar mensagens.
+4. Descubra seu **chat ID**: na interface web, em ⚙ Configurar, cole o token e
+   clique em **🔎 Detectar** (ou abra
+   `https://api.telegram.org/bot<SEU_TOKEN>/getUpdates` no navegador e copie o
+   número em `"chat":{"id": …}`).
+
+> Alternativa/fallback: WhatsApp via CallMeBot também é suportado
+> (secrets `WHATSAPP_PHONE` e `CALLMEBOT_APIKEY`), mas a entrega pode atrasar
+> alguns minutos — o Telegram tem prioridade quando os dois estão configurados.
 
 ### 3. Configure os segredos no GitHub
 
@@ -61,8 +70,8 @@ No repositório: **Settings → Secrets and variables → Actions → New reposi
 
 | Nome | Valor |
 |---|---|
-| `WHATSAPP_PHONE` | seu número com DDI, ex.: `+5511999999999` |
-| `CALLMEBOT_APIKEY` | a apikey que o CallMeBot enviou |
+| `TELEGRAM_BOT_TOKEN` | o token do @BotFather |
+| `TELEGRAM_CHAT_ID` | seu chat ID (número) |
 
 ### 4. Ative o site (GitHub Pages)
 
