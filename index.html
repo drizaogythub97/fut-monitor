@@ -90,12 +90,45 @@
   .settings-grid label{font-size:12.5px;color:var(--ink2);display:block;margin-bottom:4px}
   .settings-grid input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:10px 12px;font-size:13.5px}
   .hint{font-size:12px;color:var(--ink3);line-height:1.55;margin-top:12px}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--accent2);border-radius:10px;padding:12px 20px;font-size:13.5px;display:none;z-index:99;max-width:90vw}
-  .toast.err{border-color:var(--danger)}
+  /* notificacoes */
+  #notes{position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:10px;z-index:300;width:340px;max-width:calc(100vw - 32px)}
+  .note{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:10px;padding:12px 14px;box-shadow:0 8px 24px #0007;display:flex;gap:10px;align-items:flex-start;animation:notein .25s ease}
+  .note.ok{border-left-color:var(--accent)}
+  .note.err{border-left-color:var(--danger)}
+  .note .ic{font-size:16px;margin-top:1px}
+  .note .body{flex:1;min-width:0}
+  .note .tt{font-weight:700;font-size:13.5px}
+  .note .ms{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.45}
+  .note .x{background:none;border:none;color:var(--ink3);cursor:pointer;font-size:13px;padding:0 2px}
+  .note.out{transition:.25s;opacity:0;transform:translateX(30px)}
+  @keyframes notein{from{transform:translateX(30px);opacity:0}}
+  /* tela de carregamento */
+  #loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:200;transition:opacity .5s ease}
+  #loader.hide{opacity:0;pointer-events:none}
+  #loader .ball{font-size:44px;animation:bounce 1s ease-in-out infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+  #loader .brand{font-size:20px;font-weight:800;letter-spacing:.5px}
+  #loader .brand span{color:var(--accent)}
+  #loader .bar-track{width:240px;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  #loader .bar-fill{height:100%;width:34%;background:var(--accent);border-radius:4px;animation:slide 1.2s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-34%}100%{margin-left:100%}}
+  #loader-status{color:var(--ink2);font-size:13.5px;text-align:center;min-height:20px;padding:0 20px}
+  /* botao ocupado */
+  button.busy{position:relative;color:transparent!important;pointer-events:none}
+  button.busy::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border:2px solid #ffffff33;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  button.primary.busy::after{border-color:#06220f44;border-top-color:#06220f}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .empty{color:var(--ink3);text-align:center;padding:60px 0;font-size:14.5px;line-height:1.8}
 </style>
 </head>
 <body>
+<div id="loader">
+  <div class="ball">⚽</div>
+  <div class="brand">FUT<span>Monitor</span></div>
+  <div class="bar-track"><div class="bar-fill"></div></div>
+  <div id="loader-status">Carregando…</div>
+</div>
+<div id="notes"></div>
 <header>
   <h1>⚽ FUT<span>Monitor</span></h1>
   <div class="meta-line" id="updated-line">carregando…</div>
@@ -144,7 +177,17 @@
       <b>Contents: Read and write</b> e <b>Actions: Read and write</b>.
       Ele fica salvo somente neste navegador (localStorage). Veja o README para criar o token.
     </div>
+    <h2 style="font-size:16px;margin-top:20px">📱 WhatsApp (teste)</h2>
+    <div class="settings-grid" style="margin-top:10px">
+      <div><label>Seu número (com DDI)</label><input id="cfg-wa-phone" placeholder="+5511999999999"></div>
+      <div><label>Apikey do CallMeBot</label><input id="cfg-wa-key" type="password" placeholder="123456"></div>
+    </div>
+    <div class="hint">
+      Estes campos servem para o botão de teste abaixo. Os alertas automáticos usam os
+      <b>secrets do GitHub</b> (WHATSAPP_PHONE / CALLMEBOT_APIKEY) — use os mesmos valores nos dois lugares.
+    </div>
     <div class="modal-actions">
+      <button id="wa-test-btn" onclick="testWhatsApp()">📨 Testar notificação</button>
       <button class="primary" onclick="saveSettings()">Salvar</button>
     </div>
   </div>
@@ -170,7 +213,28 @@ function attachCoinMask(el){
   });
 }
 const parseCoins = s => { const d = (s||"").replace(/\D/g,""); return d ? +d : null; };
-function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast"+(err?" err":""); t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", 4200); }
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+
+/* notificacoes empilhadas (canto superior direito) */
+function note(type, title, msg, ms){
+  const icons = { ok:"✅", err:"⚠️", info:"ℹ️" };
+  const el = document.createElement("div");
+  el.className = "note " + type;
+  el.innerHTML = `<div class="ic">${icons[type]||"ℹ️"}</div>
+    <div class="body"><div class="tt">${title}</div><div class="ms">${msg}</div></div>
+    <button class="x">✕</button>`;
+  const kill = () => { el.classList.add("out"); setTimeout(()=>el.remove(), 260); };
+  el.querySelector(".x").onclick = kill;
+  $("#notes").appendChild(el);
+  setTimeout(kill, ms || (type==="err" ? 9000 : 5000));
+}
+function toast(msg, err){ note(err?"err":"ok", err?"Algo deu errado":"Tudo certo", msg); }
+const busy = (el, on) => { if(el) el.classList.toggle("busy", !!on); };
+
+/* tela de carregamento */
+function showLoader(status){ $("#loader-status").textContent = status || "Carregando…"; $("#loader").classList.remove("hide"); }
+function setLoader(status){ $("#loader-status").textContent = status; }
+function hideLoader(){ $("#loader").classList.add("hide"); }
 function parseFutggUrl(u){ const m=(u||"").match(new RegExp("fut\\.gg\\/players\\/(\\d+)-[^/]*\\/"+GAME+"-(\\d+)")); return m?{eaId:+m[1],cardId:+m[2]}:null; }
 function agoText(epoch){ if(!epoch) return ""; const m=Math.round((Date.now()/1000-epoch)/60); if(m<1) return "agora"; if(m<60) return `há ${m} min`; const h=Math.floor(m/60); if(h<24) return `há ${h} h`; return `há ${Math.floor(h/24)} d`; }
 
@@ -226,15 +290,45 @@ async function dispatchWorkflow(){
 }
 
 /* ---------------- dados ---------------- */
-async function loadSummary(){
+async function fetchSummaryViaApi(){
   try{
-    const r = await fetch(`data/summary.json?t=${Date.now()}`);
-    if(!r.ok) throw new Error(r.status);
-    state.summary = await r.json();
-  }catch(e){
-    state.summary = null;
+    const r = await gh(`/contents/data/summary.json?ref=${cfg().branch||"main"}`);
+    if(r.status===404) return null;
+    const j = await r.json();
+    return JSON.parse(b64dec(j.content));
+  }catch(e){ return null; }
+}
+async function loadSummary(){
+  let s = null;
+  if(hasCfg()) s = await fetchSummaryViaApi();   // via API: sempre fresco
+  if(!s){
+    try{
+      const r = await fetch(`data/summary.json?t=${Date.now()}`);
+      if(r.ok) s = await r.json();
+    }catch(e){ /* sem dados ainda */ }
+  }
+  state.summary = s;
+  render();
+}
+
+/* dispara uma coleta real e espera os precos novos chegarem */
+async function freshCollect(){
+  const t0 = Math.floor(Date.now()/1000);
+  setLoader("Disparando coleta no GitHub Actions…");
+  await dispatchWorkflow();
+  await sleep(6000);
+  const deadline = Date.now() + 150000;
+  while(Date.now() < deadline){
+    const secs = Math.round((Date.now()/1000) - t0);
+    setLoader(`Buscando preços do momento no fut.gg… (${secs}s)`);
+    const s = await fetchSummaryViaApi();
+    if(s && s.generatedAt >= t0 - 2){ state.summary = s; render(); return true; }
+    await sleep(8000);
   }
   render();
+  note("err", "A coleta demorou mais que o normal",
+    "Mostrando os últimos valores salvos. Clique em ▶ Coletar agora para tentar de novo.");
+  return false;
 }
 async function loadJson(path){
   try{ const r = await fetch(`${path}?t=${Date.now()}`); return r.ok ? await r.json() : null; }
@@ -422,8 +516,8 @@ async function addPlayer(){
   const parsed = parseFutggUrl(input.value.trim());
   if(!parsed) return toast("Link inválido. Use um link de jogador do fut.gg (edição 26).", true);
   if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
-  if(state.summary?.players?.some(p=>p.cardId===parsed.cardId)) return toast("Esse jogador já está sendo monitorado.");
-  const btn = $("#add-btn"); btn.disabled = true;
+  if(state.summary?.players?.some(p=>p.cardId===parsed.cardId)) return note("info","Já está na lista","Esse jogador já está sendo monitorado.");
+  const btn = $("#add-btn"); btn.disabled = true; busy(btn, true);
   try{
     const urlClean = input.value.trim().split("?")[0];
     await updatePlayers(json => {
@@ -434,18 +528,21 @@ async function addPlayer(){
     await dispatchWorkflow();
     state.pendingIds.add(parsed.cardId);
     input.value = "";
-    toast("Jogador adicionado! Coleta iniciada — os dados aparecem em 1–2 min.");
+    note("ok", "Jogador adicionado", "Coletando os dados dele agora…");
     render();
-    setTimeout(loadSummary, 90000);
-  }catch(e){ toast("Erro: " + e.message, true); }
-  finally{ btn.disabled = false; }
+    showLoader("Coletando dados do novo jogador…");
+    await freshCollect();
+    hideLoader();
+  }catch(e){ note("err", "Não consegui adicionar", e.message); }
+  finally{ btn.disabled = false; busy(btn, false); }
 }
 
 async function saveAlert(cardId){
   if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
   const target = parseCoins($("#target-input").value);
   const mode = $("#mode-input").value;
-  if((mode==="below"||mode==="above") && !target) return toast("Defina um valor alvo para esse modo de alerta.", true);
+  if((mode==="below"||mode==="above") && !target) return note("err","Falta o valor alvo","Defina um valor alvo para esse modo de alerta.");
+  const sbtn = document.querySelector(".alert-form .primary"); busy(sbtn, true);
   try{
     let found = true;
     await updatePlayers(json => {
@@ -456,9 +553,10 @@ async function saveAlert(cardId){
     if(!found) return toast("Jogador não encontrado no players.json.", true);
     const sp = state.summary?.players?.find(x=>x.cardId===cardId);
     if(sp){ sp.targetPrice = target; sp.alertMode = mode; }
-    toast("Alerta salvo! Vale a partir da próxima coleta.");
+    note("ok", "Alerta salvo", "Vale a partir da próxima coleta.");
     render();
-  }catch(e){ toast("Erro: " + e.message, true); }
+  }catch(e){ note("err", "Não consegui salvar", e.message); }
+  finally{ busy(sbtn, false); }
 }
 
 async function removePlayer(cardId){
@@ -470,9 +568,9 @@ async function removePlayer(cardId){
     }, `remove carta ${cardId}`);
     if(state.summary) state.summary.players = state.summary.players.filter(x=>x.cardId!==cardId);
     closeDetail(); render();
-    toast("Removido. O card some da página na próxima coleta (ou já sumiu).");
+    note("ok", "Jogador removido", "Ele não será mais monitorado.");
     await dispatchWorkflow();
-  }catch(e){ toast("Erro: " + e.message, true); }
+  }catch(e){ note("err", "Não consegui remover", e.message); }
 }
 
 /* ---------------- settings ---------------- */
@@ -480,6 +578,7 @@ function openSettings(){
   const c = cfg();
   $("#cfg-owner").value = c.owner||""; $("#cfg-repo").value = c.repo||"";
   $("#cfg-branch").value = c.branch||"main"; $("#cfg-pat").value = c.pat||"";
+  $("#cfg-wa-phone").value = c.waPhone||""; $("#cfg-wa-key").value = c.waKey||"";
   $("#settings-overlay").classList.add("open");
 }
 function closeSettings(){ $("#settings-overlay").classList.remove("open"); }
@@ -487,22 +586,52 @@ function saveSettings(){
   localStorage.setItem("futmon-cfg", JSON.stringify({
     owner: $("#cfg-owner").value.trim(), repo: $("#cfg-repo").value.trim(),
     branch: $("#cfg-branch").value.trim()||"main", pat: $("#cfg-pat").value.trim(),
+    waPhone: $("#cfg-wa-phone").value.trim(), waKey: $("#cfg-wa-key").value.trim(),
   }));
-  closeSettings(); render(); toast("Configuração salva neste navegador.");
+  closeSettings(); render(); note("ok", "Configuração salva", "Guardada apenas neste navegador.");
+}
+async function testWhatsApp(){
+  const phone = $("#cfg-wa-phone").value.trim(), key = $("#cfg-wa-key").value.trim();
+  if(!phone || !key) return note("err", "Faltam dados", "Preencha seu número e a apikey do CallMeBot acima.");
+  const btn = $("#wa-test-btn"); busy(btn, true);
+  try{
+    await fetch("https://api.callmebot.com/whatsapp.php?" + new URLSearchParams({
+      phone, apikey: key,
+      text: "🔔 Teste do FUT Monitor — suas notificações de preço estão funcionando! ⚽🪙",
+    }), { mode: "no-cors" });
+    note("info", "Teste enviado", "A mensagem deve chegar no seu WhatsApp em até 1 minuto. Se não chegar, revise o número (formato +55…) e a apikey.");
+  }catch(e){
+    note("err", "Falha ao enviar", "Não consegui contatar o CallMeBot: " + e.message);
+  }finally{ busy(btn, false); }
 }
 
 /* ---------------- init ---------------- */
 $("#add-btn").onclick = addPlayer;
 $("#add-input").addEventListener("keydown", e=>{ if(e.key==="Enter") addPlayer(); });
-$("#refresh-btn").onclick = loadSummary;
+$("#refresh-btn").onclick = async () => {
+  const b = $("#refresh-btn"); busy(b, true);
+  await loadSummary(); busy(b, false);
+  note("ok", "Dados recarregados", "Mostrando a última coleta salva.");
+};
 $("#settings-btn").onclick = openSettings;
 $("#run-btn").onclick = async () => {
-  if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
-  await dispatchWorkflow();
-  toast("Coleta disparada! Atualize em 1–2 min.");
+  if(!hasCfg()) return note("err", "Configure primeiro", "Clique em ⚙ Configurar e informe repositório e token do GitHub.");
+  showLoader("Atualizando preços…");
+  const ok = await freshCollect();
+  hideLoader();
+  if(ok) note("ok", "Preços atualizados", "Dashboard com os valores deste momento.");
 };
 document.querySelectorAll(".overlay").forEach(ov => ov.addEventListener("click", e=>{ if(e.target===ov){ ov.classList.remove("open"); if(ov.id==="detail-overlay") closeDetail(); } }));
-loadSummary();
+
+/* boot: tela de carregamento -> coleta do momento -> libera a dashboard */
+(async function boot(){
+  setLoader("Carregando seus jogadores…");
+  await loadSummary();
+  if(hasCfg() && state.summary?.players?.length){
+    await freshCollect();
+  }
+  hideLoader();
+})();
 </script>
 </body>
 </html>
