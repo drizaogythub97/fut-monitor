@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 128">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2342"/>
+      <stop offset="1" stop-color="#0b1020"/>
+    </linearGradient>
+    <linearGradient id="trend" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#38e07b"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- icone -->
+  <g>
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#tile)"/>
+    <rect x="4" y="4" width="120" height="120" rx="28" fill="none" stroke="#38e07b" stroke-opacity=".35" stroke-width="2.5"/>
+    <g stroke="#e8ecf8" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".75">
+      <circle cx="60" cy="66" r="40"/>
+      <path d="M60 47 L75 58 L69.5 75 L50.5 75 L45 58 Z" fill="#e8ecf8" stroke="none"/>
+      <path d="M60 47 L60 27.5"/>
+      <path d="M75 58 L92.5 51"/>
+      <path d="M69.5 75 L80 91"/>
+      <path d="M50.5 75 L40 91"/>
+      <path d="M45 58 L27.5 51"/>
+    </g>
+    <g filter="url(#glow)">
+      <path d="M20 100 L45 84 L60 92 L92 56" fill="none"
+            stroke="url(#trend)" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M106 42 L88 48 L100 60 Z" fill="#38e07b"/>
+    </g>
+    <circle cx="20" cy="100" r="8.5" fill="#f5c451" stroke="#0b1020" stroke-width="2.5"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="148" y="82" font-family="'Segoe UI', Arial, sans-serif" font-size="58" font-weight="800"
+        letter-spacing="1" fill="#131a30">FUT<tspan fill="#38e07b">MONITOR</tspan></text>
+  <text x="150" y="106" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="600"
+        letter-spacing="6" fill="#5f6a8c">PREÇOS EA FC 26 · ULTIMATE TEAM</text>
+</svg>

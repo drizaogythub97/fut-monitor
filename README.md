@@ -1,4 +1,6 @@
-# ⚽ FUT Monitor — monitor de preços do EA FC 26 Ultimate Team
+<p align="center"><img src="assets/logo.svg" alt="FUT Monitor" width="460"></p>
+
+# FUT Monitor — monitor de preços do EA FC 26 Ultimate Team
 
 Monitor automático de preços de cartas usando os dados públicos do [fut.gg](https://www.fut.gg),
 com alertas no WhatsApp e uma interface web com a carta, stats, PlayStyles e gráfico de
