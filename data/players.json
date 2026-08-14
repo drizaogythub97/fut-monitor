@@ -9,6 +9,13 @@
       "cardId": 117630554,
       "targetPrice": 3000000,
       "alertMode": "below"
+    },
+    {
+      "url": "https://www.fut.gg/players/190045-johan-cruyff/26-100853341/",
+      "eaId": 190045,
+      "cardId": 100853341,
+      "targetPrice": null,
+      "alertMode": "off"
     }
   ]
 }
