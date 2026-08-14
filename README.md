@@ -50,8 +50,9 @@ GitHub Pages (grátis)
 
 ### 2. Ative o WhatsApp gratuito (CallMeBot)
 
-1. Adicione o número **+34 644 84 71 89** aos contatos do seu celular.
-2. Envie para ele, pelo WhatsApp, a mensagem: `I allow callmebot to send me messages`
+1. Abra no celular: <https://wa.me/34644872157?text=I%20allow%20callmebot%20to%20send%20me%20messages>
+   (número atual do bot: **+34 644 87 21 57** — confira em callmebot.com se mudar)
+2. Envie a mensagem pré-preenchida: `I allow callmebot to send me messages`
 3. Em ~2 minutos ele responde com sua **apikey** (ex.: `Your APIKEY is 123456`).
 
 ### 3. Configure os segredos no GitHub

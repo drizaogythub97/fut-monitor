@@ -1,7 +1,7 @@
 """Notificacao por WhatsApp via CallMeBot (gratuito para uso pessoal).
 
 Como ativar (uma unica vez):
-1. Adicione o numero +34 644 84 71 89 aos seus contatos (nome sugerido: CallMeBot).
+1. Abra https://wa.me/34644872157 (numero atual: +34 644 87 21 57).
 2. Envie pelo WhatsApp a mensagem: "I allow callmebot to send me messages"
 3. Aguarde a resposta com sua API key (ex.: "Your APIKEY is 123456").
 4. Guarde seu telefone (formato +5511999999999) e a apikey nos secrets do GitHub.
