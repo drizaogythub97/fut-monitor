@@ -14,8 +14,8 @@
       "url": "https://www.fut.gg/players/190042-diego-maradona/26-117630554/",
       "eaId": 190042,
       "cardId": 117630554,
-      "targetPrice": null,
-      "alertMode": "off"
+      "targetPrice": 3000000,
+      "alertMode": "below"
     }
   ]
 }
