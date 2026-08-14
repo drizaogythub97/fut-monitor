@@ -162,6 +162,14 @@ const state = { summary:null, players:[], pendingIds:new Set(), chart:null, rang
 const fmt = v => v==null ? "—" : v.toLocaleString("pt-BR");
 const cfg = () => JSON.parse(localStorage.getItem("futmon-cfg") || "{}");
 const hasCfg = () => { const c = cfg(); return c.owner && c.repo && c.pat; };
+function attachCoinMask(el){
+  if(!el) return;
+  el.addEventListener("input", ()=>{
+    const digits = el.value.replace(/\D/g,"").slice(0,12);
+    el.value = digits ? (+digits).toLocaleString("pt-BR") : "";
+  });
+}
+const parseCoins = s => { const d = (s||"").replace(/\D/g,""); return d ? +d : null; };
 function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast"+(err?" err":""); t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", 4200); }
 function parseFutggUrl(u){ const m=(u||"").match(new RegExp("fut\\.gg\\/players\\/(\\d+)-[^/]*\\/"+GAME+"-(\\d+)")); return m?{eaId:+m[1],cardId:+m[2]}:null; }
 function agoText(epoch){ if(!epoch) return ""; const m=Math.round((Date.now()/1000-epoch)/60); if(m<1) return "agora"; if(m<60) return `há ${m} min`; const h=Math.floor(m/60); if(h<24) return `há ${h} h`; return `há ${Math.floor(h/24)} d`; }
@@ -170,6 +178,7 @@ function agoText(epoch){ if(!epoch) return ""; const m=Math.round((Date.now()/10
 async function gh(path, opts={}){
   const c = cfg();
   const r = await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}${path}`, {
+    cache: "no-store",
     ...opts,
     headers:{ "Authorization":`Bearer ${c.pat}`, "Accept":"application/vnd.github+json", ...(opts.headers||{}) }
   });
@@ -192,6 +201,22 @@ async function putPlayersFile(json, sha, message){
   if(sha) body.sha = sha;
   const r = await gh(`/contents/data/players.json`, { method:"PUT", body: JSON.stringify(body) });
   if(!r.ok) throw new Error("Falha ao salvar players.json");
+}
+async function updatePlayers(mutator, message){
+  // le -> altera -> grava; em caso de conflito (409), rele e tenta de novo
+  let lastErr;
+  for(let attempt=0; attempt<3; attempt++){
+    const { json, sha } = await getPlayersFile();
+    const res = mutator(json);
+    if(res===false) return null; // mutator cancelou
+    try{ await putPlayersFile(json, sha, message); return json; }
+    catch(e){
+      lastErr = e;
+      if(!/409/.test(e.message)) throw e;
+      await new Promise(r=>setTimeout(r, 800*(attempt+1)));
+    }
+  }
+  throw lastErr;
 }
 async function dispatchWorkflow(){
   const c = cfg();
@@ -315,7 +340,7 @@ async function openDetail(p){
     ${allPs.length?`<div class="section-title">PlayStyles</div>
       <div class="badges">${allPs.map(n=>`<span class="badge${psPlus.has(n)?" plus":""}">${psPlus.has(n)?"✦ ":""}${n}</span>`).join("")}</div>`:""}
     <div class="alert-form">
-      <label>Alvo (moedas):</label><input id="target-input" type="number" min="0" step="1000" value="${p.targetPrice??""}">
+      <label>Alvo (moedas):</label><input id="target-input" type="text" inputmode="numeric" placeholder="ex.: 2.000.000" value="${p.targetPrice?fmt(p.targetPrice):""}">
       <label>Modo:</label>
       <select id="mode-input">
         <option value="off" ${!p.alertMode||p.alertMode==="off"?"selected":""}>Sem alertas</option>
@@ -341,6 +366,7 @@ async function openDetail(p){
       <a href="${p.url}" target="_blank" rel="noopener"><button>Ver no fut.gg ↗</button></a>
       <button class="danger" onclick="removePlayer(${p.cardId})">🗑 Remover monitor</button>
     </div>`;
+  attachCoinMask($("#target-input"));
   state._hist = hist;
   drawChart(hist);
 }
@@ -399,12 +425,12 @@ async function addPlayer(){
   if(state.summary?.players?.some(p=>p.cardId===parsed.cardId)) return toast("Esse jogador já está sendo monitorado.");
   const btn = $("#add-btn"); btn.disabled = true;
   try{
-    const { json, sha } = await getPlayersFile();
-    json.players = json.players || [];
-    if(!json.players.some(p=>p.cardId===parsed.cardId)){
-      json.players.push({ url: input.value.trim().split("?")[0], eaId: parsed.eaId, cardId: parsed.cardId, targetPrice: null, alertMode: "off" });
-      await putPlayersFile(json, sha, `adiciona carta ${parsed.cardId}`);
-    }
+    const urlClean = input.value.trim().split("?")[0];
+    await updatePlayers(json => {
+      json.players = json.players || [];
+      if(json.players.some(p=>p.cardId===parsed.cardId)) return false;
+      json.players.push({ url: urlClean, eaId: parsed.eaId, cardId: parsed.cardId, targetPrice: null, alertMode: "off" });
+    }, `adiciona carta ${parsed.cardId}`);
     await dispatchWorkflow();
     state.pendingIds.add(parsed.cardId);
     input.value = "";
@@ -417,15 +443,17 @@ async function addPlayer(){
 
 async function saveAlert(cardId){
   if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
-  const target = parseInt($("#target-input").value) || null;
+  const target = parseCoins($("#target-input").value);
   const mode = $("#mode-input").value;
   if((mode==="below"||mode==="above") && !target) return toast("Defina um valor alvo para esse modo de alerta.", true);
   try{
-    const { json, sha } = await getPlayersFile();
-    const p = (json.players||[]).find(x=>x.cardId===cardId);
-    if(!p) return toast("Jogador não encontrado no players.json.", true);
-    p.targetPrice = target; p.alertMode = mode;
-    await putPlayersFile(json, sha, `alerta carta ${cardId}: ${mode} ${target??""}`);
+    let found = true;
+    await updatePlayers(json => {
+      const p = (json.players||[]).find(x=>x.cardId===cardId);
+      if(!p){ found = false; return false; }
+      p.targetPrice = target; p.alertMode = mode;
+    }, `alerta carta ${cardId}: ${mode} ${target??""}`);
+    if(!found) return toast("Jogador não encontrado no players.json.", true);
     const sp = state.summary?.players?.find(x=>x.cardId===cardId);
     if(sp){ sp.targetPrice = target; sp.alertMode = mode; }
     toast("Alerta salvo! Vale a partir da próxima coleta.");
@@ -437,9 +465,9 @@ async function removePlayer(cardId){
   if(!hasCfg()) return toast("Configure o GitHub primeiro (botão ⚙ Configurar).", true);
   if(!confirm("Remover este jogador do monitor?")) return;
   try{
-    const { json, sha } = await getPlayersFile();
-    json.players = (json.players||[]).filter(x=>x.cardId!==cardId);
-    await putPlayersFile(json, sha, `remove carta ${cardId}`);
+    await updatePlayers(json => {
+      json.players = (json.players||[]).filter(x=>x.cardId!==cardId);
+    }, `remove carta ${cardId}`);
     if(state.summary) state.summary.players = state.summary.players.filter(x=>x.cardId!==cardId);
     closeDetail(); render();
     toast("Removido. O card some da página na próxima coleta (ou já sumiu).");
